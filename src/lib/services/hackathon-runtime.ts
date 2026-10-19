@@ -10,7 +10,6 @@ import { LocalTextTool } from "@/tools/adapters/local-text-tool";
 import { MockWorkflowEngine } from "@/workflows/core/mock-workflow";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __grokbotRuntime: HackathonRuntime | undefined;
 }
 

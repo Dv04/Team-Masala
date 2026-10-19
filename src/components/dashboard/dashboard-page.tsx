@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AgentCard } from "@/components/agents/agent-card";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { TaskCard } from "@/components/dashboard/task-card";
@@ -27,18 +27,30 @@ interface WorkflowsResponse {
   workflows: WorkflowRun[];
 }
 
-export function DashboardPage() {
+interface DashboardPageProps {
+  initialTasks: Task[];
+  initialAgents: AgentDefinition[];
+  initialWorkflows: WorkflowRun[];
+  initialActivity: ActivityEvent[];
+}
+
+export function DashboardPage({
+  initialTasks,
+  initialAgents,
+  initialWorkflows,
+  initialActivity,
+}: DashboardPageProps) {
   const { getJson, postJson } = useApi();
   const { notify } = useToast();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [agents, setAgents] = useState<AgentDefinition[]>([]);
-  const [workflows, setWorkflows] = useState<WorkflowRun[]>([]);
-  const [activity, setActivity] = useState<ActivityEvent[]>([]);
+  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [agents, setAgents] = useState<AgentDefinition[]>(initialAgents);
+  const [workflows, setWorkflows] = useState<WorkflowRun[]>(initialWorkflows);
+  const [activity, setActivity] = useState<ActivityEvent[]>(initialActivity);
   const [title, setTitle] = useState("Demo task");
   const [objective, setObjective] = useState("Validate starter workflow path");
   const [input, setInput] = useState("Summarize this startup checklist.");
   const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -48,9 +60,7 @@ export function DashboardPage() {
     [selectedTaskId, tasks],
   );
 
-  const loadData = async () => {
-    setLoading(true);
-    setError(undefined);
+  const loadData = useCallback(async () => {
     try {
       const [taskData, agentData, workflowData] = await Promise.all([
         getJson<TasksResponse>("/api/tasks"),
@@ -66,14 +76,12 @@ export function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    void loadData();
-  }, []);
+  }, [getJson]);
 
   const submitTask = async () => {
     setSubmitting(true);
+    setLoading(true);
+    setError(undefined);
     try {
       const response = await postJson<{ task: Task }>("/api/tasks", { title, objective, input });
       setSelectedTaskId(response.task.id);
@@ -99,7 +107,14 @@ export function DashboardPage() {
             <Button variant="secondary" onClick={() => setShowAbout(true)}>
               About mock mode
             </Button>
-            <Button variant="secondary" onClick={() => void loadData()}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setLoading(true);
+                setError(undefined);
+                void loadData();
+              }}
+            >
               Refresh
             </Button>
           </div>
